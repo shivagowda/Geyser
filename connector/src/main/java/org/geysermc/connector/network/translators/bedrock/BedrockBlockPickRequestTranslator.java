@@ -30,7 +30,9 @@ import com.nukkitx.protocol.bedrock.packet.BlockPickRequestPacket;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
+import org.geysermc.connector.network.translators.world.block.BlockStateValues;
+import org.geysermc.connector.registry.BlockRegistries;
+import org.geysermc.connector.registry.type.BlockMapping;
 import org.geysermc.connector.utils.InventoryUtils;
 
 @Translator(packet = BlockPickRequestPacket.class)
@@ -42,10 +44,17 @@ public class BedrockBlockPickRequestTranslator extends PacketTranslator<BlockPic
         int blockToPick = session.getConnector().getWorldManager().getBlockAt(session, vector.getX(), vector.getY(), vector.getZ());
         
         // Block is air - chunk caching is probably off
-        if (blockToPick == BlockTranslator.JAVA_AIR_ID) {
+        if (blockToPick == BlockStateValues.JAVA_AIR_ID) {
             return;
         }
 
-        InventoryUtils.findOrCreateItem(session, BlockTranslator.getPickItem(blockToPick));
+        BlockMapping item = BlockRegistries.JAVA_BLOCKS.get(blockToPick);
+        String identifier;
+        if (item == null || item.getIdentifier() == null) {
+            identifier = BlockRegistries.JAVA_IDENTIFIERS.get().inverse().get(blockToPick).split("\\[")[0];
+        } else {
+            identifier = item.getIdentifier();
+        }
+        InventoryUtils.findOrCreateItem(session, identifier);
     }
 }

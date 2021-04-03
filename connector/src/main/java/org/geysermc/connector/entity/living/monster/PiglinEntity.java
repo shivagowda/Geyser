@@ -31,7 +31,6 @@ import com.nukkitx.protocol.bedrock.data.entity.EntityData;
 import com.nukkitx.protocol.bedrock.data.entity.EntityFlag;
 import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
 
 public class PiglinEntity extends BasePiglinEntity {
 
@@ -61,7 +60,7 @@ public class PiglinEntity extends BasePiglinEntity {
     @Override
     public void updateEquipment(GeyserSession session) {
         // Check if the Piglin is holding Gold and set the ADMIRING flag accordingly
-        metadata.getFlags().setFlag(EntityFlag.ADMIRING, offHand.getId() == ItemRegistry.GOLD.getBedrockId());
+        metadata.getFlags().setFlag(EntityFlag.ADMIRING, offHand.getId() == session.getItemMappings().getStored("minecraft:gold_ingot").getBedrockId());
         super.updateBedrockMetadata(session);
 
         super.updateEquipment(session);

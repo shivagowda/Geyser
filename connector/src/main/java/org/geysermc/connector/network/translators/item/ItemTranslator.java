@@ -38,6 +38,9 @@ import org.geysermc.connector.GeyserConnector;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.ItemRemapper;
 import org.geysermc.connector.network.translators.chat.MessageTranslator;
+import org.geysermc.connector.registry.BlockRegistries;
+import org.geysermc.connector.registry.Registries;
+import org.geysermc.connector.registry.type.ItemMapping;
 import org.geysermc.connector.utils.FileUtils;
 import org.geysermc.connector.utils.LanguageUtils;
 import org.reflections.Reflections;
@@ -73,8 +76,8 @@ public abstract class ItemTranslator {
                     continue;
                 }
                 ItemTranslator itemStackTranslator = (ItemTranslator) clazz.newInstance();
-                List<ItemEntry> appliedItems = itemStackTranslator.getAppliedItems();
-                for (ItemEntry item : appliedItems) {
+                List<ItemMapping> appliedItems = itemStackTranslator.getAppliedItems();
+                for (ItemMapping item : appliedItems) {
                     ItemTranslator registered = ITEM_STACK_TRANSLATORS.get(item.getJavaId());
                     if (registered != null) {
                         GeyserConnector.getInstance().getLogger().error(LanguageUtils.getLocaleStringLog("geyser.network.translator.item.already_registered", clazz.getCanonicalName(), registered.getClass().getCanonicalName(), item.getJavaIdentifier()));
@@ -90,11 +93,15 @@ public abstract class ItemTranslator {
         NBT_TRANSLATORS = loadedNbtItemTranslators.keySet().stream().sorted(Comparator.comparingInt(loadedNbtItemTranslators::get)).collect(Collectors.toList());
     }
 
-    public static ItemStack translateToJava(ItemData data) {
+    public static ItemStack translateToJava(GeyserSession session, ItemData data) {
+        return translateToJava(session.getUpstream().getSession().getPacketCodec().getProtocolVersion(), data);
+    }
+
+    public static ItemStack translateToJava(int protocolVersion, ItemData data) {
         if (data == null) {
             return new ItemStack(0);
         }
-        ItemEntry javaItem = ItemRegistry.getItem(data);
+        ItemMapping javaItem = Registries.ITEMS.forVersion(protocolVersion).getMapping(data);
 
         ItemStack itemStack;
         ItemTranslator itemStackTranslator = ITEM_STACK_TRANSLATORS.get(javaItem.getJavaId());
@@ -123,12 +130,13 @@ public abstract class ItemTranslator {
             return ItemData.AIR;
         }
 
-        ItemEntry bedrockItem = ItemRegistry.getItem(stack);
+        ItemMapping bedrockItem = session.getItemMappings().getItems().get(stack.getId());
         if (bedrockItem == null) {
-            session.getConnector().getLogger().debug("No matching ItemEntry for " + stack);
+            session.getConnector().getLogger().debug("No matching ItemMapping for " + stack);
             return ItemData.AIR;
         }
 
+        System.out.println("bedrock id map: " + bedrockItem.getBedrockId() + " w/ " + bedrockItem.getBedrockIdentifier() + " for " + bedrockItem.getJavaIdentifier() + " w/ java id " + bedrockItem.getJavaId());
         CompoundTag nbt = stack.getNbt() != null ? stack.getNbt().clone() : null;
 
         // This is a fallback for maps with no nbt
@@ -189,7 +197,7 @@ public abstract class ItemTranslator {
                 if (!block.startsWith("minecraft:")) block = "minecraft:" + block;
                 // Get the Bedrock identifier of the item and replace it.
                 // This will unfortunately be limited - for example, beds and banners will be translated weirdly
-                canModifyBedrock[i] = session.getBlockTranslator().getBedrockBlockIdentifier(block).replace("minecraft:", "");
+                canModifyBedrock[i] = BlockRegistries.JAVA_TO_BEDROCK_IDENTIFIERS.get(block).replace("minecraft:", "");
             }
         }
         return canModifyBedrock;
@@ -197,30 +205,30 @@ public abstract class ItemTranslator {
 
     private static final ItemTranslator DEFAULT_TRANSLATOR = new ItemTranslator() {
         @Override
-        public List<ItemEntry> getAppliedItems() {
+        public List<ItemMapping> getAppliedItems() {
             return null;
         }
     };
 
-    public ItemData translateToBedrock(ItemStack itemStack, ItemEntry itemEntry) {
+    public ItemData translateToBedrock(ItemStack itemStack, ItemMapping itemMapping) {
         if (itemStack == null) {
             return ItemData.AIR;
         }
         if (itemStack.getNbt() == null) {
-            return ItemData.of(itemEntry.getBedrockId(), (short) itemEntry.getBedrockData(), itemStack.getAmount());
+            return ItemData.of(itemMapping.getBedrockId(), (short) itemMapping.getBedrockData(), itemStack.getAmount());
         }
-        return ItemData.of(itemEntry.getBedrockId(), (short) itemEntry.getBedrockData(), itemStack.getAmount(), this.translateNbtToBedrock(itemStack.getNbt()));
+        return ItemData.of(itemMapping.getBedrockId(), (short) itemMapping.getBedrockData(), itemStack.getAmount(), this.translateNbtToBedrock(itemStack.getNbt()));
     }
 
-    public ItemStack translateToJava(ItemData itemData, ItemEntry itemEntry) {
+    public ItemStack translateToJava(ItemData itemData, ItemMapping itemMapping) {
         if (itemData == null) return null;
         if (itemData.getTag() == null) {
-            return new ItemStack(itemEntry.getJavaId(), itemData.getCount(), new com.github.steveice10.opennbt.tag.builtin.CompoundTag(""));
+            return new ItemStack(itemMapping.getJavaId(), itemData.getCount(), new com.github.steveice10.opennbt.tag.builtin.CompoundTag(""));
         }
-        return new ItemStack(itemEntry.getJavaId(), itemData.getCount(), this.translateToJavaNBT("", itemData.getTag()));
+        return new ItemStack(itemMapping.getJavaId(), itemData.getCount(), this.translateToJavaNBT("", itemData.getTag()));
     }
 
-    public abstract List<ItemEntry> getAppliedItems();
+    public abstract List<ItemMapping> getAppliedItems();
 
     public NbtMap translateNbtToBedrock(com.github.steveice10.opennbt.tag.builtin.CompoundTag tag) {
         NbtMapBuilder builder = NbtMap.builder();

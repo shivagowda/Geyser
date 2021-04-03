@@ -44,8 +44,7 @@ import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
-import org.geysermc.connector.network.translators.item.ItemEntry;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.registry.type.ItemMapping;
 
 import java.util.Arrays;
 import java.util.List;
@@ -100,7 +99,7 @@ public class BedrockInteractTranslator extends PacketTranslator<InteractPacket> 
 
         switch (packet.getAction()) {
             case INTERACT:
-                if (session.getPlayerInventory().getItemInHand().getJavaId() == ItemRegistry.SHIELD.getJavaId()) {
+                if (session.getPlayerInventory().getItemInHand().getJavaId() == session.getItemMappings().getStored("minecraft:shield").getJavaId()) {
                     break;
                 }
                 ClientPlayerInteractEntityPacket interactPacket = new ClientPlayerInteractEntityPacket((int) entity.getEntityId(),
@@ -124,8 +123,8 @@ public class BedrockInteractTranslator extends PacketTranslator<InteractPacket> 
                     if (interactEntity == null)
                         return;
                     EntityDataMap entityMetadata = interactEntity.getMetadata();
-                    ItemEntry itemEntry = session.getPlayerInventory().getItemInHand().getItemEntry();
-                    String javaIdentifierStripped = itemEntry.getJavaIdentifier().replace("minecraft:", "");
+                    ItemMapping itemMapping = session.getPlayerInventory().getItemInHand().getMapping(session);
+                    String javaIdentifierStripped = itemMapping.getJavaIdentifier().replace("minecraft:", "");
 
                     // TODO - in the future, update these in the metadata? So the client doesn't have to wiggle their cursor around for it to happen
                     // TODO - also, might be good to abstract out the eating thing. I know there will need to be food tracked for https://github.com/GeyserMC/Geyser/issues/1005 but not all food is breeding food
@@ -237,7 +236,7 @@ public class BedrockInteractTranslator extends PacketTranslator<InteractPacket> 
                                     // Can't ride a baby
                                     if (tamed) {
                                         interactiveTag = InteractiveTag.RIDE_HORSE;
-                                    } else if (itemEntry.equals(ItemEntry.AIR)) {
+                                    } else if (itemMapping.equals(session.getItemMappings().getStored("minecraft:air"))) {
                                         // Can't hide an untamed entity without having your hand empty
                                         interactiveTag = InteractiveTag.MOUNT;
                                     }

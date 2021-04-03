@@ -28,7 +28,7 @@ package org.geysermc.platform.spigot.world.manager;
 import com.github.steveice10.mc.protocol.data.game.chunk.Chunk;
 import org.bukkit.plugin.Plugin;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
+import org.geysermc.connector.network.translators.world.block.BlockStateValues;
 
 /**
  * Should only be used when we know {@link GeyserSpigotWorldManager#getBlockAt(GeyserSession, int, int, int)}
@@ -43,7 +43,7 @@ public class GeyserSpigotFallbackWorldManager extends GeyserSpigotWorldManager {
 
     @Override
     public int getBlockAt(GeyserSession session, int x, int y, int z) {
-        return BlockTranslator.JAVA_AIR_ID;
+        return BlockStateValues.JAVA_AIR_ID;
     }
 
     @Override

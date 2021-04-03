@@ -23,38 +23,13 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.connector.network.translators;
+package org.geysermc.connector.registry.loader;
 
-import com.nukkitx.nbt.NBTInputStream;
-import com.nukkitx.nbt.NbtMap;
-import com.nukkitx.nbt.NbtUtils;
-import org.geysermc.connector.utils.FileUtils;
-import org.geysermc.connector.utils.LanguageUtils;
+import org.geysermc.connector.network.translators.world.block.entity.BlockEntity;
+import org.geysermc.connector.network.translators.world.block.entity.BlockEntityTranslator;
 
-import java.io.InputStream;
-
-/**
- * Registry for entity identifiers.
- */
-public class EntityIdentifierRegistry {
-
-    public static final NbtMap ENTITY_IDENTIFIERS;
-
-    private EntityIdentifierRegistry() {
-    }
-
-    public static void init() {
-        // no-op
-    }
-
-    static {
-        /* Load entity identifiers */
-        InputStream stream = FileUtils.getResource("bedrock/entity_identifiers.dat");
-
-        try (NBTInputStream nbtInputStream = NbtUtils.createNetworkReader(stream)) {
-            ENTITY_IDENTIFIERS = (NbtMap) nbtInputStream.readTag();
-        } catch (Exception e) {
-            throw new AssertionError(LanguageUtils.getLocaleStringLog("geyser.toolbox.fail.entity"), e);
-        }
+public class BlockEntityRegistryLoader extends ReflectiveRegistryLoader<String, BlockEntity, BlockEntityTranslator> {
+    public BlockEntityRegistryLoader() {
+        super(BlockEntity.class, BlockEntity::name);
     }
 }

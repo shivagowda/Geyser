@@ -41,8 +41,7 @@ import org.geysermc.connector.inventory.MerchantContainer;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
-import org.geysermc.connector.network.translators.item.ItemEntry;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.registry.type.ItemMapping;
 import org.geysermc.connector.network.translators.item.ItemTranslator;
 
 import java.util.ArrayList;
@@ -136,18 +135,18 @@ public class JavaTradeListTranslator extends PacketTranslator<ServerTradeListPac
 
     private NbtMap getItemTag(GeyserSession session, ItemStack stack, int specialPrice) {
         ItemData itemData = ItemTranslator.translateToBedrock(session, stack);
-        ItemEntry itemEntry = ItemRegistry.getItem(stack);
+        ItemMapping itemMapping = session.getItemMappings().getItems().get(stack.getId());
 
         NbtMapBuilder builder = NbtMap.builder();
         builder.putByte("Count", (byte) (Math.max(itemData.getCount() + specialPrice, 1)));
         builder.putShort("Damage", itemData.getDamage());
-        builder.putString("Name", itemEntry.getBedrockIdentifier());
+        builder.putString("Name", itemMapping.getBedrockIdentifier());
         if (itemData.getTag() != null) {
             NbtMap tag = itemData.getTag().toBuilder().build();
             builder.put("tag", tag);
         }
 
-        NbtMap blockTag = session.getBlockTranslator().getBedrockBlockNbt(itemEntry.getJavaIdentifier());
+        NbtMap blockTag = session.getBlockMappings().getBedrockBlockNbt(itemMapping.getJavaIdentifier());
         if (blockTag != null) {
             // This fixes certain blocks being unable to stack after grabbing one
             builder.putCompound("Block", blockTag);

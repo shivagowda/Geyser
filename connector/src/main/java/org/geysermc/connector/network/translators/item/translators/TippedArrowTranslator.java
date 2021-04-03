@@ -30,9 +30,10 @@ import com.github.steveice10.opennbt.tag.builtin.StringTag;
 import com.github.steveice10.opennbt.tag.builtin.Tag;
 import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
 import org.geysermc.connector.GeyserConnector;
+import org.geysermc.connector.network.BedrockProtocol;
 import org.geysermc.connector.network.translators.ItemRemapper;
-import org.geysermc.connector.network.translators.item.ItemEntry;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.registry.Registries;
+import org.geysermc.connector.registry.type.ItemMapping;
 import org.geysermc.connector.network.translators.item.ItemTranslator;
 import org.geysermc.connector.network.translators.item.TippedArrowPotion;
 
@@ -42,36 +43,39 @@ import java.util.stream.Collectors;
 @ItemRemapper
 public class TippedArrowTranslator extends ItemTranslator {
 
-    private final List<ItemEntry> appliedItems;
+    private final List<ItemMapping> appliedItems;
 
-    private static final int TIPPED_ARROW_JAVA_ID = ItemRegistry.getItemEntry("minecraft:tipped_arrow").getJavaId();
+    private static final int TIPPED_ARROW_JAVA_ID = Registries.ITEMS.forVersion(BedrockProtocol.DEFAULT_BEDROCK_CODEC.getProtocolVersion())
+            .getMapping("minecraft:tipped_arrow").getJavaId();
 
     public TippedArrowTranslator() {
-        appliedItems = ItemRegistry.ITEM_ENTRIES.values().stream().filter(entry ->
-                entry.getJavaIdentifier().contains("arrow") && !entry.getJavaIdentifier().contains("spectral")).collect(Collectors.toList());
+        appliedItems = Registries.ITEMS.forVersion(BedrockProtocol.DEFAULT_BEDROCK_CODEC.getProtocolVersion()).getItems()
+                .values()
+                .stream().filter(entry -> entry.getJavaIdentifier().contains("arrow") && !entry.getJavaIdentifier().contains("spectral"))
+                .collect(Collectors.toList());
     }
 
     @Override
-    public ItemData translateToBedrock(ItemStack itemStack, ItemEntry itemEntry) {
-        if (!itemEntry.getJavaIdentifier().equals("minecraft:tipped_arrow") || itemStack.getNbt() == null) {
+    public ItemData translateToBedrock(ItemStack itemStack, ItemMapping itemMapping) {
+        if (!itemMapping.getJavaIdentifier().equals("minecraft:tipped_arrow") || itemStack.getNbt() == null) {
             // We're only concerned about minecraft:arrow when translating Bedrock -> Java
-            return super.translateToBedrock(itemStack, itemEntry);
+            return super.translateToBedrock(itemStack, itemMapping);
         }
         Tag potionTag = itemStack.getNbt().get("Potion");
         if (potionTag instanceof StringTag) {
             TippedArrowPotion tippedArrowPotion = TippedArrowPotion.getByJavaIdentifier(((StringTag) potionTag).getValue());
             if (tippedArrowPotion != null) {
-                return ItemData.of(itemEntry.getBedrockId(), tippedArrowPotion.getBedrockId(), itemStack.getAmount(), translateNbtToBedrock(itemStack.getNbt()));
+                return ItemData.of(itemMapping.getBedrockId(), tippedArrowPotion.getBedrockId(), itemStack.getAmount(), translateNbtToBedrock(itemStack.getNbt()));
             }
             GeyserConnector.getInstance().getLogger().debug("Unknown Java potion (tipped arrow): " + potionTag.getValue());
         }
-        return super.translateToBedrock(itemStack, itemEntry);
+        return super.translateToBedrock(itemStack, itemMapping);
     }
 
     @Override
-    public ItemStack translateToJava(ItemData itemData, ItemEntry itemEntry) {
+    public ItemStack translateToJava(ItemData itemData, ItemMapping itemMapping) {
         TippedArrowPotion tippedArrowPotion = TippedArrowPotion.getByBedrockId(itemData.getDamage());
-        ItemStack itemStack = super.translateToJava(itemData, itemEntry);
+        ItemStack itemStack = super.translateToJava(itemData, itemMapping);
         if (tippedArrowPotion != null) {
             itemStack = new ItemStack(TIPPED_ARROW_JAVA_ID, itemStack.getAmount(), itemStack.getNbt());
             StringTag potionTag = new StringTag("Potion", tippedArrowPotion.getJavaIdentifier());
@@ -81,7 +85,7 @@ public class TippedArrowTranslator extends ItemTranslator {
     }
 
     @Override
-    public List<ItemEntry> getAppliedItems() {
+    public List<ItemMapping> getAppliedItems() {
         return appliedItems;
     }
 }

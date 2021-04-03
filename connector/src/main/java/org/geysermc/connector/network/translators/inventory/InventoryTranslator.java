@@ -837,7 +837,7 @@ public abstract class InventoryTranslator {
         for (int slot : affectedSlots) {
             BedrockContainerSlot bedrockSlot = javaSlotToBedrockContainer(slot);
             List<ItemStackResponsePacket.ItemEntry> list = containerMap.computeIfAbsent(bedrockSlot.getContainer(), k -> new ArrayList<>());
-            list.add(makeItemEntry(bedrockSlot.getSlot(), inventory.getItem(slot)));
+            list.add(makeItemMapping(bedrockSlot.getSlot(), inventory.getItem(slot)));
         }
 
         List<ItemStackResponsePacket.ContainerEntry> containerEntries = new ArrayList<>();
@@ -845,20 +845,20 @@ public abstract class InventoryTranslator {
             containerEntries.add(new ItemStackResponsePacket.ContainerEntry(entry.getKey(), entry.getValue()));
         }
 
-        ItemStackResponsePacket.ItemEntry cursorEntry = makeItemEntry(0, session.getPlayerInventory().getCursor());
+        ItemStackResponsePacket.ItemEntry cursorEntry = makeItemMapping(0, session.getPlayerInventory().getCursor());
         containerEntries.add(new ItemStackResponsePacket.ContainerEntry(ContainerSlotType.CURSOR, Collections.singletonList(cursorEntry)));
 
         return containerEntries;
     }
 
-    public static ItemStackResponsePacket.ItemEntry makeItemEntry(int bedrockSlot, GeyserItemStack itemStack) {
-        ItemStackResponsePacket.ItemEntry itemEntry;
+    public static ItemStackResponsePacket.ItemEntry makeItemMapping(int bedrockSlot, GeyserItemStack itemStack) {
+        ItemStackResponsePacket.ItemEntry itemMapping;
         if (!itemStack.isEmpty()) {
-            itemEntry = new ItemStackResponsePacket.ItemEntry((byte) bedrockSlot, (byte) bedrockSlot, (byte) itemStack.getAmount(), itemStack.getNetId(), "", 0);
+            itemMapping = new ItemStackResponsePacket.ItemEntry((byte) bedrockSlot, (byte) bedrockSlot, (byte) itemStack.getAmount(), itemStack.getNetId(), "", 0);
         } else {
-            itemEntry = new ItemStackResponsePacket.ItemEntry((byte) bedrockSlot, (byte) bedrockSlot, (byte) 0, 0, "", 0);
+            itemMapping = new ItemStackResponsePacket.ItemEntry((byte) bedrockSlot, (byte) bedrockSlot, (byte) 0, 0, "", 0);
         }
-        return itemEntry;
+        return itemMapping;
     }
 
     protected static boolean isCursor(StackRequestSlotInfoData slotInfoData) {

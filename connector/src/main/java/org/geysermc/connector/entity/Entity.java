@@ -52,7 +52,7 @@ import org.geysermc.connector.entity.player.PlayerEntity;
 import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.inventory.PlayerInventory;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.registry.type.ItemMapping;
 import org.geysermc.connector.utils.AttributeUtils;
 import org.geysermc.connector.network.translators.chat.MessageTranslator;
 
@@ -282,11 +282,12 @@ public class Entity {
                     // Shield code
                     if (session.getPlayerEntity().getEntityId() == entityId && metadata.getFlags().getFlag(EntityFlag.SNEAKING)) {
                         PlayerInventory playerInv = session.getPlayerInventory();
-                        if ((playerInv.getItemInHand().getJavaId() == ItemRegistry.SHIELD.getJavaId()) ||
-                                (playerInv.getOffhand().getJavaId() == ItemRegistry.SHIELD.getJavaId())) {
+                        ItemMapping shield = session.getItemMappings().getStored("minecraft:shield");
+                        if ((playerInv.getItemInHand().getJavaId() == shield.getJavaId()) ||
+                                (playerInv.getOffhand().getJavaId() == shield.getJavaId())) {
                             ClientPlayerUseItemPacket useItemPacket;
                             metadata.getFlags().setFlag(EntityFlag.BLOCKING, true);
-                            if (playerInv.getItemInHand().getJavaId() == ItemRegistry.SHIELD.getJavaId()) {
+                            if (playerInv.getItemInHand().getJavaId() == shield.getJavaId()) {
                                 useItemPacket = new ClientPlayerUseItemPacket(Hand.MAIN_HAND);
                             }
                             // Else we just assume it's the offhand, to simplify logic and to assure the packet gets sent

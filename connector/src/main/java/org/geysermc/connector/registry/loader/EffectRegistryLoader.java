@@ -23,30 +23,33 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.connector.network.translators.item;
+package org.geysermc.connector.registry.loader;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.ToString;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.geysermc.connector.GeyserConnector;
+import org.geysermc.connector.utils.FileUtils;
 
-@Getter
-@AllArgsConstructor
-@ToString
-public class ItemEntry {
+import java.io.InputStream;
+import java.util.Map;
+import java.util.WeakHashMap;
 
-    public static ItemEntry AIR = new ItemEntry("minecraft:air", "minecraft:air", 0, 0, 0, false, 64);
+public abstract class EffectRegistryLoader<T> extends ResourceRegistryLoader<T> {
+    private static final Map<String, JsonNode> loadedFiles = new WeakHashMap<>();
 
-    private final String javaIdentifier;
-    private final String bedrockIdentifier;
-    private final int javaId;
-    private final int bedrockId;
-    private final int bedrockData;
+    public void loadFile(String input) {
+        if (!loadedFiles.containsKey(input)) {
+            InputStream effectsStream = FileUtils.getResource(input);
+            JsonNode effects;
+            try {
+                effects = GeyserConnector.JSON_MAPPER.readTree(effectsStream);
+            } catch (Exception e) {
+                throw new AssertionError("Unable to load registrations for " + input, e);
+            }
+            loadedFiles.put(input, effects);
+        }
+    }
 
-    private final boolean block;
-    private final int stackSize;
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj == this || (obj instanceof ItemEntry && ((ItemEntry) obj).getBedrockId() == this.getBedrockId() && ((ItemEntry) obj).getJavaIdentifier().equals(this.getJavaIdentifier()));
+    public JsonNode get(String input) {
+        return loadedFiles.get(input);
     }
 }

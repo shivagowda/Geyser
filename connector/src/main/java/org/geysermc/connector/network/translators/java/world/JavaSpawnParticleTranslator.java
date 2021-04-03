@@ -39,8 +39,9 @@ import com.nukkitx.protocol.bedrock.packet.SpawnParticleEffectPacket;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
-import org.geysermc.connector.network.translators.effect.EffectRegistry;
 import org.geysermc.connector.network.translators.item.ItemTranslator;
+import org.geysermc.connector.registry.Registries;
+import org.geysermc.connector.registry.type.ParticleMapping;
 import org.geysermc.connector.utils.DimensionUtils;
 
 @Translator(packet = ServerSpawnParticlePacket.class)
@@ -53,14 +54,14 @@ public class JavaSpawnParticleTranslator extends PacketTranslator<ServerSpawnPar
             case BLOCK:
                 particle.setType(LevelEventType.PARTICLE_DESTROY_BLOCK_NO_SOUND);
                 particle.setPosition(Vector3f.from(packet.getX(), packet.getY(), packet.getZ()));
-                particle.setData(session.getBlockTranslator().getBedrockBlockId(((BlockParticleData) packet.getParticle().getData()).getBlockState()));
+                particle.setData(session.getBlockMappings().getBedrockBlockId(((BlockParticleData) packet.getParticle().getData()).getBlockState()));
                 session.sendUpstreamPacket(particle);
                 break;
             case FALLING_DUST:
                 //In fact, FallingDustParticle should have data like DustParticle,
                 //but in MCProtocol, its data is BlockState(1).
                 particle.setType(LevelEventType.PARTICLE_FALLING_DUST);
-                particle.setData(session.getBlockTranslator().getBedrockBlockId(((FallingDustParticleData)packet.getParticle().getData()).getBlockState()));
+                particle.setData(session.getBlockMappings().getBedrockBlockId(((FallingDustParticleData)packet.getParticle().getData()).getBlockState()));
                 particle.setPosition(Vector3f.from(packet.getX(), packet.getY(), packet.getZ()));
                 session.sendUpstreamPacket(particle);
                 break;
@@ -85,13 +86,14 @@ public class JavaSpawnParticleTranslator extends PacketTranslator<ServerSpawnPar
                 session.sendUpstreamPacket(particle);
                 break;
             default:
-                LevelEventType typeParticle = EffectRegistry.getParticleLevelEventType(packet.getParticle().getType());
+                ParticleMapping particleMapping = Registries.PARTICLES.get(packet.getParticle().getType());
+                LevelEventType typeParticle = particleMapping.getLevelEventType();
                 if (typeParticle != null) {
                     particle.setType(typeParticle);
                     particle.setPosition(Vector3f.from(packet.getX(), packet.getY(), packet.getZ()));
                     session.sendUpstreamPacket(particle);
                 } else {
-                    String stringParticle = EffectRegistry.getParticleString(packet.getParticle().getType());
+                    String stringParticle = particleMapping.getIdentifier();
                     if (stringParticle != null) {
                         SpawnParticleEffectPacket stringPacket = new SpawnParticleEffectPacket();
                         stringPacket.setIdentifier(stringParticle);

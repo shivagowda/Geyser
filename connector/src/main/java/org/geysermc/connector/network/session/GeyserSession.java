@@ -85,14 +85,13 @@ import org.geysermc.connector.network.remote.RemoteServer;
 import org.geysermc.connector.network.session.auth.AuthData;
 import org.geysermc.connector.network.session.auth.BedrockClientData;
 import org.geysermc.connector.network.session.cache.*;
-import org.geysermc.connector.network.translators.BiomeTranslator;
-import org.geysermc.connector.network.translators.EntityIdentifierRegistry;
 import org.geysermc.connector.network.translators.PacketTranslatorRegistry;
 import org.geysermc.connector.network.translators.chat.MessageTranslator;
 import org.geysermc.connector.network.translators.collision.CollisionManager;
 import org.geysermc.connector.network.translators.inventory.InventoryTranslator;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
+import org.geysermc.connector.registry.Registries;
+import org.geysermc.connector.registry.type.BlockMappings;
+import org.geysermc.connector.registry.type.ItemMappings;
 import org.geysermc.connector.skin.SkinManager;
 import org.geysermc.connector.utils.*;
 import org.geysermc.floodgate.util.BedrockData;
@@ -167,7 +166,13 @@ public class GeyserSession implements CommandSender {
      * Stores the block translations for this specific version.
      */
     @Setter
-    private BlockTranslator blockTranslator;
+    private BlockMappings blockMappings;
+
+    /**
+     * Stores the item translations for this specific version.
+     */
+    @Setter
+    private ItemMappings itemMappings;
 
     private final Map<Vector3i, SkullPlayerEntity> skullCache = new ConcurrentHashMap<>();
     private final Long2ObjectMap<ClientboundMapItemDataPacket> storedMaps = Long2ObjectMaps.synchronize(new Long2ObjectOpenHashMap<>());
@@ -439,49 +444,53 @@ public class GeyserSession implements CommandSender {
     }
 
     public void connect(RemoteServer remoteServer) {
-        startGame();
-        this.remoteServer = remoteServer;
+        try {
+            startGame();
+            this.remoteServer = remoteServer;
 
-        // Set the hardcoded shield ID to the ID we just defined in StartGamePacket
-        upstream.getSession().getHardcodedBlockingId().set(ItemRegistry.SHIELD.getBedrockId());
+            // Set the hardcoded shield ID to the ID we just defined in StartGamePacket
+            upstream.getSession().getHardcodedBlockingId().set(this.itemMappings.getStored("minecraft:shield").getBedrockId());
 
-        ChunkUtils.sendEmptyChunks(this, playerEntity.getPosition().toInt(), 0, false);
+            ChunkUtils.sendEmptyChunks(this, playerEntity.getPosition().toInt(), 0, false);
 
-        BiomeDefinitionListPacket biomeDefinitionListPacket = new BiomeDefinitionListPacket();
-        biomeDefinitionListPacket.setDefinitions(BiomeTranslator.BIOMES);
-        upstream.sendPacket(biomeDefinitionListPacket);
+            BiomeDefinitionListPacket biomeDefinitionListPacket = new BiomeDefinitionListPacket();
+            biomeDefinitionListPacket.setDefinitions(Registries.BIOMES.get());
+            upstream.sendPacket(biomeDefinitionListPacket);
 
-        AvailableEntityIdentifiersPacket entityPacket = new AvailableEntityIdentifiersPacket();
-        entityPacket.setIdentifiers(EntityIdentifierRegistry.ENTITY_IDENTIFIERS);
-        upstream.sendPacket(entityPacket);
+            AvailableEntityIdentifiersPacket entityPacket = new AvailableEntityIdentifiersPacket();
+            entityPacket.setIdentifiers(Registries.ENTITY_IDENTIFIERS.get());
+            upstream.sendPacket(entityPacket);
 
-        CreativeContentPacket creativePacket = new CreativeContentPacket();
-        creativePacket.setContents(ItemRegistry.CREATIVE_ITEMS);
-        upstream.sendPacket(creativePacket);
+            CreativeContentPacket creativePacket = new CreativeContentPacket();
+            creativePacket.setContents(this.itemMappings.getCreativeItems());
+            upstream.sendPacket(creativePacket);
 
-        PlayStatusPacket playStatusPacket = new PlayStatusPacket();
-        playStatusPacket.setStatus(PlayStatusPacket.Status.PLAYER_SPAWN);
-        upstream.sendPacket(playStatusPacket);
+            PlayStatusPacket playStatusPacket = new PlayStatusPacket();
+            playStatusPacket.setStatus(PlayStatusPacket.Status.PLAYER_SPAWN);
+            upstream.sendPacket(playStatusPacket);
 
-        UpdateAttributesPacket attributesPacket = new UpdateAttributesPacket();
-        attributesPacket.setRuntimeEntityId(getPlayerEntity().getGeyserId());
-        List<AttributeData> attributes = new ArrayList<>();
-        // Default move speed
-        // Bedrock clients move very fast by default until they get an attribute packet correcting the speed
-        attributes.add(new AttributeData("minecraft:movement", 0.0f, 1024f, 0.1f, 0.1f));
-        attributesPacket.setAttributes(attributes);
-        upstream.sendPacket(attributesPacket);
+            UpdateAttributesPacket attributesPacket = new UpdateAttributesPacket();
+            attributesPacket.setRuntimeEntityId(getPlayerEntity().getGeyserId());
+            List<AttributeData> attributes = new ArrayList<>();
+            // Default move speed
+            // Bedrock clients move very fast by default until they get an attribute packet correcting the speed
+            attributes.add(new AttributeData("minecraft:movement", 0.0f, 1024f, 0.1f, 0.1f));
+            attributesPacket.setAttributes(attributes);
+            upstream.sendPacket(attributesPacket);
 
-        GameRulesChangedPacket gamerulePacket = new GameRulesChangedPacket();
-        // Only allow the server to send health information
-        // Setting this to false allows natural regeneration to work false but doesn't break it being true
-        gamerulePacket.getGameRules().add(new GameRuleData<>("naturalregeneration", false));
-        // Don't let the client modify the inventory on death
-        // Setting this to true allows keep inventory to work if enabled but doesn't break functionality being false
-        gamerulePacket.getGameRules().add(new GameRuleData<>("keepinventory", true));
-        // Ensure client doesn't try and do anything funky; the server handles this for us
-        gamerulePacket.getGameRules().add(new GameRuleData<>("spawnradius", 0));
-        upstream.sendPacket(gamerulePacket);
+            GameRulesChangedPacket gamerulePacket = new GameRulesChangedPacket();
+            // Only allow the server to send health information
+            // Setting this to false allows natural regeneration to work false but doesn't break it being true
+            gamerulePacket.getGameRules().add(new GameRuleData<>("naturalregeneration", false));
+            // Don't let the client modify the inventory on death
+            // Setting this to true allows keep inventory to work if enabled but doesn't break functionality being false
+            gamerulePacket.getGameRules().add(new GameRuleData<>("keepinventory", true));
+            // Ensure client doesn't try and do anything funky; the server handles this for us
+            gamerulePacket.getGameRules().add(new GameRuleData<>("spawnradius", 0));
+            upstream.sendPacket(gamerulePacket);
+        } catch (Throwable ex) {
+            ex.printStackTrace();
+        }
     }
 
     public void login() {
@@ -889,7 +898,7 @@ public class GeyserSession implements CommandSender {
         // startGamePacket.setCurrentTick(0);
         startGamePacket.setEnchantmentSeed(0);
         startGamePacket.setMultiplayerCorrelationId("");
-        startGamePacket.setItemEntries(ItemRegistry.ITEMS);
+        startGamePacket.setItemEntries(this.itemMappings.getItemEntries());
         startGamePacket.setVanillaVersion("*");
         startGamePacket.setInventoriesServerAuthoritative(true);
         startGamePacket.setAuthoritativeMovementMode(AuthoritativeMovementMode.CLIENT); // can be removed once 1.16.200 support is dropped

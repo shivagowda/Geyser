@@ -29,15 +29,67 @@ import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import com.nukkitx.math.vector.Vector3i;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.protocol.bedrock.packet.BlockEntityDataPacket;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import org.geysermc.connector.GeyserConnector;
 import org.geysermc.connector.network.session.GeyserSession;
+import org.geysermc.connector.network.translators.world.block.entity.BedrockOnlyBlockEntity;
 import org.geysermc.connector.network.translators.world.block.entity.BlockEntityTranslator;
+import org.geysermc.connector.network.translators.world.block.entity.RequiresBlockState;
+import org.geysermc.connector.registry.Registries;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class BlockEntityUtils {
-    private static final BlockEntityTranslator EMPTY_TRANSLATOR = BlockEntityTranslator.BLOCK_ENTITY_TRANSLATORS.get("Empty");
+
+    /**
+     * A list of all block entities that require the Java block state in order to fill out their block entity information.
+     * This list will be smaller with cache chunks on as we don't need to double-cache data
+     */
+    public static final ObjectArrayList<RequiresBlockState> REQUIRES_BLOCK_STATE_LIST = new ObjectArrayList<>(); // TODO: Handle as a registry item?
+
+    /**
+     * Contains a list of irregular block entity name translations that can't be fit into the regex
+     */
+    public static final Map<String, String> BLOCK_ENTITY_TRANSLATIONS = new HashMap<String, String>() {
+        {
+            // Bedrock/Java differences
+            put("minecraft:enchanting_table", "EnchantTable");
+            put("minecraft:jigsaw", "JigsawBlock");
+            put("minecraft:piston_head", "PistonArm");
+            put("minecraft:trapped_chest", "Chest");
+            // There are some legacy IDs sent but as far as I can tell they are not needed for things to work properly
+        }
+    };
+
+    private static final BlockEntityTranslator EMPTY_TRANSLATOR = Registries.BLOCK_ENTITIES.get("Empty");
+
+    static {
+        boolean cacheChunks = GeyserConnector.getInstance().getConfig().isCacheChunks();
+        for (BlockEntityTranslator translator : Registries.BLOCK_ENTITIES.get().values()) {
+            if (!(translator instanceof RequiresBlockState)) {
+                continue;
+            }
+            Class<? extends BlockEntityTranslator> clazz = translator.getClass();
+            GeyserConnector.getInstance().getLogger().debug("Found block entity that requires block state: " + clazz.getCanonicalName());
+
+            try {
+                RequiresBlockState requiresBlockState = (RequiresBlockState) clazz.newInstance();
+                if (cacheChunks && !(requiresBlockState instanceof BedrockOnlyBlockEntity)) {
+                    // Not needed to put this one in the map; cache chunks takes care of that for us
+                    GeyserConnector.getInstance().getLogger().debug("Not adding because cache chunks is enabled.");
+                    continue;
+                }
+                REQUIRES_BLOCK_STATE_LIST.add(requiresBlockState);
+            } catch (InstantiationException | IllegalAccessException e) {
+                GeyserConnector.getInstance().getLogger().error(LanguageUtils.getLocaleStringLog("geyser.network.translator.block_state.failed", clazz.getCanonicalName()));
+            }
+        }
+    }
 
     public static String getBedrockBlockEntityId(String id) {
         // These are the only exceptions when it comes to block entity ids
-        String value = BlockEntityTranslator.BLOCK_ENTITY_TRANSLATIONS.get(id);
+        String value = BLOCK_ENTITY_TRANSLATIONS.get(id);
         if (value != null) {
             return value;
         }
@@ -59,7 +111,7 @@ public class BlockEntityUtils {
     }
 
     public static BlockEntityTranslator getBlockEntityTranslator(String name) {
-        BlockEntityTranslator blockEntityTranslator = BlockEntityTranslator.BLOCK_ENTITY_TRANSLATORS.get(name);
+        BlockEntityTranslator blockEntityTranslator = Registries.BLOCK_ENTITIES.get(name);
         if (blockEntityTranslator != null) {
             return blockEntityTranslator;
         }

@@ -29,8 +29,9 @@ import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
 import com.github.steveice10.opennbt.tag.builtin.ListTag;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.nbt.NbtMapBuilder;
-import org.geysermc.connector.network.translators.item.ItemEntry;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.network.BedrockProtocol;
+import org.geysermc.connector.registry.Registries;
+import org.geysermc.connector.registry.type.ItemMapping;
 
 @BlockEntity(name = "Campfire")
 public class CampfireBlockEntityTranslator extends BlockEntityTranslator {
@@ -45,7 +46,7 @@ public class CampfireBlockEntityTranslator extends BlockEntityTranslator {
     }
 
     protected NbtMap getItem(CompoundTag tag) {
-        ItemEntry entry = ItemRegistry.getItemEntry((String) tag.get("id").getValue());
+        ItemMapping entry = Registries.ITEMS.forVersion(BedrockProtocol.DEFAULT_BEDROCK_CODEC.getProtocolVersion()).getMapping((String) tag.get("id").getValue());
         NbtMapBuilder tagBuilder = NbtMap.builder()
                 .putString("Name", entry.getBedrockIdentifier())
                 .putByte("Count", (byte) tag.get("Count").getValue())

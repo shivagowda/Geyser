@@ -92,7 +92,7 @@ public class AnvilInventoryTranslator extends AbstractBlockInventoryTranslator {
 
     private void sendRenamePacket(GeyserSession session, Inventory inventory, ItemData outputItem, String name) {
         session.sendDownstreamPacket(new ClientRenameItemPacket(name));
-        inventory.setItem(2, GeyserItemStack.from(ItemTranslator.translateToJava(outputItem)), session);
+        inventory.setItem(2, GeyserItemStack.from(ItemTranslator.translateToJava(session, outputItem)), session);
     }
 
     /* 1.16.100 support end */

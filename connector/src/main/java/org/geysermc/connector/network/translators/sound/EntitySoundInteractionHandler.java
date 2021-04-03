@@ -25,12 +25,11 @@
 
 package org.geysermc.connector.network.translators.sound;
 
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.ItemStack;
 import com.nukkitx.math.vector.Vector3f;
 import org.geysermc.connector.entity.Entity;
 import org.geysermc.connector.inventory.GeyserItemStack;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.registry.Registries;
 
 import java.util.Map;
 
@@ -48,7 +47,7 @@ public interface EntitySoundInteractionHandler extends SoundInteractionHandler<E
      * @param entity the entity interacted with
      */
     static void handleEntityInteraction(GeyserSession session, Vector3f position, Entity entity) {
-        for (Map.Entry<SoundHandler, SoundInteractionHandler<?>> interactionEntry : SoundHandlerRegistry.INTERACTION_HANDLERS.entrySet()) {
+        for (Map.Entry<SoundHandler, SoundInteractionHandler<?>> interactionEntry : Registries.SOUND_HANDLERS.get().entrySet()) {
             if (!(interactionEntry.getValue() instanceof EntitySoundInteractionHandler)) {
                 continue;
             }
@@ -67,7 +66,7 @@ public interface EntitySoundInteractionHandler extends SoundInteractionHandler<E
                 if (itemInHand.isEmpty()) {
                     continue;
                 }
-                String handIdentifier = itemInHand.getItemEntry().getJavaIdentifier();
+                String handIdentifier = itemInHand.getMapping(session).getJavaIdentifier();
                 boolean contains = false;
                 for (String itemIdentifier : interactionEntry.getKey().items()) {
                     if (handIdentifier.contains(itemIdentifier)) {

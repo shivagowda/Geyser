@@ -26,7 +26,6 @@
 package org.geysermc.connector.entity.living.merchant;
 
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.EntityMetadata;
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.VillagerData;
 import com.nukkitx.math.vector.Vector3f;
 import com.nukkitx.math.vector.Vector3i;
@@ -37,7 +36,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
+import org.geysermc.connector.registry.BlockRegistries;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -109,7 +108,7 @@ public class VillagerEntity extends AbstractMerchantEntity {
         if (session.getConnector().getConfig().isCacheChunks() && bedPosition != null) {
             bedId = session.getConnector().getWorldManager().getBlockAt(session, bedPosition);
         }
-        String bedRotationZ = BlockTranslator.getJavaIdBlockMap().inverse().get(bedId);
+        String bedRotationZ = BlockRegistries.JAVA_IDENTIFIERS.get().inverse().get(bedId);
         setRotation(rotation);
         setOnGround(isOnGround);
         this.position = Vector3f.from(position.getX() + relX, position.getY() + relY, position.getZ() + relZ);

@@ -42,7 +42,7 @@ import lombok.Setter;
 import org.geysermc.connector.entity.attribute.AttributeType;
 import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.registry.type.ItemMapping;
 import org.geysermc.connector.utils.AttributeUtils;
 import org.geysermc.connector.utils.ChunkUtils;
 
@@ -73,8 +73,9 @@ public class LivingEntity extends Entity {
 
                 //blocking gets triggered when using a bow, but if we set USING_ITEM for all items, it may look like
                 //you're "mining" with ex. a shield.
-                boolean isUsingShield = (getHand().getId() == ItemRegistry.SHIELD.getBedrockId() ||
-                                         getHand().equals(ItemData.AIR) && getOffHand().getId() == ItemRegistry.SHIELD.getBedrockId());
+                ItemMapping shield = session.getItemMappings().getStored("minecraft:shield");
+                boolean isUsingShield = (getHand().getId() == shield.getBedrockId() ||
+                                         getHand().equals(ItemData.AIR) && getOffHand().getId() == shield.getBedrockId());
                 metadata.getFlags().setFlag(EntityFlag.USING_ITEM, (xd & 0x01) == 0x01 && !isUsingShield);
                 metadata.getFlags().setFlag(EntityFlag.BLOCKING, (xd & 0x01) == 0x01);
 

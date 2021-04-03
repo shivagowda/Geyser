@@ -33,8 +33,7 @@ import org.geysermc.common.window.button.FormButton;
 import org.geysermc.common.window.button.FormImage;
 import org.geysermc.common.window.response.SimpleFormResponse;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
+import org.geysermc.connector.registry.BlockRegistries;
 
 import java.util.Map;
 
@@ -104,7 +103,7 @@ public class StatisticsUtils {
 
                     for (Map.Entry<Statistic, Integer> entry : session.getStatistics().entrySet()) {
                         if (entry.getKey() instanceof BreakBlockStatistic) {
-                            String block = BlockTranslator.JAVA_ID_TO_JAVA_IDENTIFIER_MAP.get(((BreakBlockStatistic) entry.getKey()).getId());
+                            String block = BlockRegistries.JAVA_BLOCKS.get(((BreakBlockStatistic) entry.getKey()).getId()).getIdentifier();
                             block = block.replace("minecraft:", "block.minecraft.");
                             block = LocaleUtils.getLocaleString(block, language);
                             content.append(block + ": " + entry.getValue() + "\n");
@@ -116,7 +115,7 @@ public class StatisticsUtils {
 
                     for (Map.Entry<Statistic, Integer> entry : session.getStatistics().entrySet()) {
                         if (entry.getKey() instanceof BreakItemStatistic) {
-                            String item = ItemRegistry.ITEM_ENTRIES.get(((BreakItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
+                            String item = session.getItemMappings().getItems().get(((BreakItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
                             content.append(getItemTranslateKey(item, language) + ": " + entry.getValue() + "\n");
                         }
                     }
@@ -126,7 +125,7 @@ public class StatisticsUtils {
 
                     for (Map.Entry<Statistic, Integer> entry : session.getStatistics().entrySet()) {
                         if (entry.getKey() instanceof CraftItemStatistic) {
-                            String item = ItemRegistry.ITEM_ENTRIES.get(((CraftItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
+                            String item = session.getItemMappings().getItems().get(((CraftItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
                             content.append(getItemTranslateKey(item, language) + ": " + entry.getValue() + "\n");
                         }
                     }
@@ -136,7 +135,7 @@ public class StatisticsUtils {
 
                     for (Map.Entry<Statistic, Integer> entry : session.getStatistics().entrySet()) {
                         if (entry.getKey() instanceof UseItemStatistic) {
-                            String item = ItemRegistry.ITEM_ENTRIES.get(((UseItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
+                            String item = session.getItemMappings().getItems().get(((UseItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
                             content.append(getItemTranslateKey(item, language) + ": " + entry.getValue() + "\n");
                         }
                     }
@@ -146,7 +145,7 @@ public class StatisticsUtils {
 
                     for (Map.Entry<Statistic, Integer> entry : session.getStatistics().entrySet()) {
                         if (entry.getKey() instanceof PickupItemStatistic) {
-                            String item = ItemRegistry.ITEM_ENTRIES.get(((PickupItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
+                            String item = session.getItemMappings().getItems().get(((PickupItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
                             content.append(getItemTranslateKey(item, language) + ": " + entry.getValue() + "\n");
                         }
                     }
@@ -156,7 +155,7 @@ public class StatisticsUtils {
 
                     for (Map.Entry<Statistic, Integer> entry : session.getStatistics().entrySet()) {
                         if (entry.getKey() instanceof DropItemStatistic) {
-                            String item = ItemRegistry.ITEM_ENTRIES.get(((DropItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
+                            String item = session.getItemMappings().getItems().get(((DropItemStatistic) entry.getKey()).getId()).getJavaIdentifier();
                             content.append(getItemTranslateKey(item, language) + ": " + entry.getValue() + "\n");
                         }
                     }

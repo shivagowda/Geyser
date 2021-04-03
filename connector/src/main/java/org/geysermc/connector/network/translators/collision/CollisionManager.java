@@ -38,6 +38,7 @@ import org.geysermc.connector.entity.player.PlayerEntity;
 import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.collision.translators.BlockCollision;
+import org.geysermc.connector.utils.BlockUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -226,7 +227,7 @@ public class CollisionManager {
 
         // Used when correction code needs to be run before the main correction
         for (Vector3i blockPos : collidableBlocks) {
-            BlockCollision blockCollision = CollisionTranslator.getCollisionAt(
+            BlockCollision blockCollision = BlockUtils.getCollisionAt(
                     session, blockPos.getX(), blockPos.getY(), blockPos.getZ()
             );
             if (blockCollision != null) {
@@ -236,7 +237,7 @@ public class CollisionManager {
 
         // Main correction code
         for (Vector3i blockPos : collidableBlocks) {
-            BlockCollision blockCollision = CollisionTranslator.getCollisionAt(
+            BlockCollision blockCollision = BlockUtils.getCollisionAt(
                     session, blockPos.getX(), blockPos.getY(), blockPos.getZ()
             );
             if (blockCollision != null) {

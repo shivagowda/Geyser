@@ -53,7 +53,6 @@ import org.geysermc.connector.entity.player.SkullPlayerEntity;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.inventory.translators.LecternInventoryTranslator;
 import org.geysermc.connector.network.translators.world.block.BlockStateValues;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
 import org.geysermc.connector.network.translators.world.block.entity.BedrockOnlyBlockEntity;
 import org.geysermc.connector.network.translators.world.block.entity.BlockEntityTranslator;
 import org.geysermc.connector.network.translators.world.block.entity.RequiresBlockState;
@@ -62,12 +61,11 @@ import org.geysermc.connector.network.translators.world.chunk.BlockStorage;
 import org.geysermc.connector.network.translators.world.chunk.ChunkSection;
 import org.geysermc.connector.network.translators.world.chunk.bitarray.BitArray;
 import org.geysermc.connector.network.translators.world.chunk.bitarray.BitArrayVersion;
+import org.geysermc.connector.registry.BlockRegistries;
 
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
-
-import static org.geysermc.connector.network.translators.world.block.BlockTranslator.JAVA_AIR_ID;
 
 @UtilityClass
 public class ChunkUtils {
@@ -138,15 +136,15 @@ public class ChunkUtils {
 
             if (javaPalette instanceof GlobalPalette) {
                 // As this is the global palette, simply iterate through the whole chunk section once
-                ChunkSection section = new ChunkSection(session.getBlockTranslator().getBedrockAirId());
+                ChunkSection section = new ChunkSection(session.getBlockMappings().getBedrockAirId());
                 for (int yzx = 0; yzx < BlockStorage.SIZE; yzx++) {
                     int javaId = javaData.get(yzx);
-                    int bedrockId = session.getBlockTranslator().getBedrockBlockId(javaId);
+                    int bedrockId = session.getBlockMappings().getBedrockBlockId(javaId);
                     int xzy = indexYZXtoXZY(yzx);
                     section.getBlockStorageArray()[0].setFullBlock(xzy, bedrockId);
 
-                    if (BlockTranslator.isWaterlogged(javaId)) {
-                        section.getBlockStorageArray()[1].setFullBlock(xzy, session.getBlockTranslator().getBedrockWaterId());
+                    if (BlockRegistries.WATERLOGGED.get().contains(javaId)) {
+                        section.getBlockStorageArray()[1].setFullBlock(xzy, session.getBlockMappings().getBedrockWaterId());
                     }
 
                     // Check if block is piston or flower to see if we'll need to create additional block entities, as they're only block entities in Bedrock
@@ -168,9 +166,9 @@ public class ChunkUtils {
             // Iterate through palette and convert state IDs to Bedrock, doing some additional checks as we go
             for (int i = 0; i < javaPalette.size(); i++) {
                 int javaId = javaPalette.idToState(i);
-                bedrockPalette.add(session.getBlockTranslator().getBedrockBlockId(javaId));
+                bedrockPalette.add(session.getBlockMappings().getBedrockBlockId(javaId));
 
-                if (BlockTranslator.isWaterlogged(javaId)) {
+                if (BlockRegistries.WATERLOGGED.get().contains(javaId)) {
                     waterloggedPaletteIds.set(i);
                 }
 
@@ -224,8 +222,8 @@ public class ChunkUtils {
 
                 // V1 palette
                 IntList layer1Palette = new IntArrayList(2);
-                layer1Palette.add(session.getBlockTranslator().getBedrockAirId()); // Air - see BlockStorage's constructor for more information
-                layer1Palette.add(session.getBlockTranslator().getBedrockWaterId());
+                layer1Palette.add(session.getBlockMappings().getBedrockAirId()); // Air - see BlockStorage's constructor for more information
+                layer1Palette.add(session.getBlockMappings().getBedrockWaterId());
 
                 layers = new BlockStorage[]{ layer0, new BlockStorage(BitArrayVersion.V1.createArray(BlockStorage.SIZE, layer1Data), layer1Palette) };
             }
@@ -333,7 +331,7 @@ public class ChunkUtils {
         if (frameEntityId != -1) {
             // TODO: Very occasionally the item frame doesn't sync up when destroyed
             Entity entity = session.getEntityCache().getEntityByJavaId(frameEntityId);
-            if (blockState == JAVA_AIR_ID && entity != null) { // Item frame is still present and no block overrides that; refresh it
+            if (blockState == BlockStateValues.JAVA_AIR_ID && entity != null) { // Item frame is still present and no block overrides that; refresh it
                 ((ItemFrameEntity) entity).updateBlock(session);
                 return;
             }
@@ -352,7 +350,7 @@ public class ChunkUtils {
             skull.despawnEntity(session, position);
         }
 
-        int blockId = session.getBlockTranslator().getBedrockBlockId(blockState);
+        int blockId = session.getBlockMappings().getBedrockBlockId(blockState);
 
         UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
         updateBlockPacket.setDataLayer(0);
@@ -365,10 +363,10 @@ public class ChunkUtils {
         UpdateBlockPacket waterPacket = new UpdateBlockPacket();
         waterPacket.setDataLayer(1);
         waterPacket.setBlockPosition(position);
-        if (BlockTranslator.isWaterlogged(blockState)) {
-            waterPacket.setRuntimeId(session.getBlockTranslator().getBedrockWaterId());
+        if (BlockRegistries.WATERLOGGED.get().contains(blockState)) {
+            waterPacket.setRuntimeId(session.getBlockMappings().getBedrockWaterId());
         } else {
-            waterPacket.setRuntimeId(session.getBlockTranslator().getBedrockAirId());
+            waterPacket.setRuntimeId(session.getBlockMappings().getBedrockAirId());
         }
         session.sendUpstreamPacket(waterPacket);
 
@@ -400,7 +398,7 @@ public class ChunkUtils {
         // Since Java stores bed colors/skull information as part of the namespaced ID and Bedrock stores it as a tag
         // This is the only place I could find that interacts with the Java block state and block updates
         // Iterates through all block entity translators and determines if the block state needs to be saved
-        for (RequiresBlockState requiresBlockState : BlockEntityTranslator.REQUIRES_BLOCK_STATE_LIST) {
+        for (RequiresBlockState requiresBlockState : BlockEntityUtils.REQUIRES_BLOCK_STATE_LIST) {
             if (requiresBlockState.isBlock(blockState)) {
                 // Flower pots are block entities only in Bedrock and are not updated anywhere else like note blocks
                 if (requiresBlockState instanceof BedrockOnlyBlockEntity) {
@@ -426,7 +424,7 @@ public class ChunkUtils {
                 data.setChunkX(chunkX + x);
                 data.setChunkZ(chunkZ + z);
                 data.setSubChunksLength(0);
-                data.setData(session.getBlockTranslator().getEmptyChunkData());
+                data.setData(new byte[0]);
                 data.setCachingEnabled(false);
                 session.sendUpstreamPacket(data);
 

@@ -28,16 +28,15 @@ package org.geysermc.connector.network.translators.item.translators.nbt;
 import com.github.steveice10.opennbt.tag.builtin.*;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.ItemRemapper;
-import org.geysermc.connector.network.translators.item.ItemEntry;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
 import org.geysermc.connector.network.translators.item.ItemTranslator;
 import org.geysermc.connector.network.translators.item.NbtItemStackTranslator;
+import org.geysermc.connector.registry.type.ItemMapping;
 
 @ItemRemapper
 public class ShulkerBoxItemTranslator extends NbtItemStackTranslator {
 
     @Override
-    public void translateToBedrock(GeyserSession session, CompoundTag itemTag, ItemEntry itemEntry) {
+    public void translateToBedrock(GeyserSession session, CompoundTag itemTag, ItemMapping itemMapping) {
         if (!itemTag.contains("BlockEntityTag")) return; // Empty shulker box
 
         CompoundTag blockEntityTag = itemTag.get("BlockEntityTag");
@@ -49,10 +48,10 @@ public class ShulkerBoxItemTranslator extends NbtItemStackTranslator {
             boxItemTag.put(new ByteTag("Slot", ((ByteTag) itemData.get("Slot")).getValue()));
             boxItemTag.put(new ByteTag("WasPickedUp", (byte) 0)); // ???
 
-            ItemEntry boxItemEntry = ItemRegistry.getItemEntry(((StringTag) itemData.get("id")).getValue());
+            ItemMapping boxItemMapping = session.getItemMappings().getMapping(((StringTag) itemData.get("id")).getValue());
 
-            boxItemTag.put(new StringTag("Name", boxItemEntry.getBedrockIdentifier()));
-            boxItemTag.put(new ShortTag("Damage", (short) boxItemEntry.getBedrockData()));
+            boxItemTag.put(new StringTag("Name", boxItemMapping.getBedrockIdentifier()));
+            boxItemTag.put(new ShortTag("Damage", (short) boxItemMapping.getBedrockData()));
             boxItemTag.put(new ByteTag("Count", ((ByteTag) itemData.get("Count")).getValue()));
             if (itemData.contains("tag")) {
                 // Only the display name is what we have interest in, so just translate that if relevant
@@ -70,14 +69,14 @@ public class ShulkerBoxItemTranslator extends NbtItemStackTranslator {
     }
 
     @Override
-    public void translateToJava(CompoundTag itemTag, ItemEntry itemEntry) {
+    public void translateToJava(CompoundTag itemTag, ItemMapping itemMapping) {
         if (itemTag.contains("Items")) { // Remove any extraneous Bedrock tag and don't touch the Java one
             itemTag.remove("Items");
         }
     }
 
     @Override
-    public boolean acceptItem(ItemEntry itemEntry) {
-        return itemEntry.getJavaIdentifier().contains("shulker_box");
+    public boolean acceptItem(ItemMapping itemMapping) {
+        return itemMapping.getJavaIdentifier().contains("shulker_box");
     }
 }

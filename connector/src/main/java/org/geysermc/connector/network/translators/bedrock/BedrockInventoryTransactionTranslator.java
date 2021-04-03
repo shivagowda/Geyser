@@ -53,10 +53,10 @@ import org.geysermc.connector.inventory.GeyserItemStack;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
-import org.geysermc.connector.network.translators.item.ItemEntry;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
+import org.geysermc.connector.registry.type.ItemMapping;
 import org.geysermc.connector.network.translators.sound.EntitySoundInteractionHandler;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
+import org.geysermc.connector.network.translators.world.block.BlockStateValues;
+import org.geysermc.connector.registry.BlockRegistries;
 import org.geysermc.connector.utils.BlockUtils;
 
 import java.util.concurrent.TimeUnit;
@@ -127,7 +127,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         }
 
                         // Bedrock sends block interact code for a Java entity so we send entity code back to Java
-                        if (session.getBlockTranslator().isItemFrame(packet.getBlockRuntimeId()) &&
+                        if (session.getBlockMappings().isItemFrame(packet.getBlockRuntimeId()) &&
                                 session.getEntityCache().getEntityByJavaId(ItemFrameEntity.getItemFrameEntityId(session, packet.getBlockPosition())) != null) {
                             Vector3f vector = packet.getClickPosition();
                             ClientPlayerInteractEntityPacket interactPacket = new ClientPlayerInteractEntityPacket((int) ItemFrameEntity.getItemFrameEntityId(session, packet.getBlockPosition()),
@@ -188,12 +188,12 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         session.sendDownstreamPacket(blockPacket);
 
                         // Otherwise boats will not be able to be placed in survival and buckets won't work on mobile
-                        if (packet.getItemInHand() != null && ItemRegistry.BOATS.contains(packet.getItemInHand().getId())) {
+                        if (packet.getItemInHand() != null && session.getItemMappings().getBoatIds().contains(packet.getItemInHand().getId())) {
                             ClientPlayerUseItemPacket itemPacket = new ClientPlayerUseItemPacket(Hand.MAIN_HAND);
                             session.sendDownstreamPacket(itemPacket);
                         }
                         // Check actions, otherwise buckets may be activated when block inventories are accessed
-                        else if (packet.getItemInHand() != null && ItemRegistry.BUCKETS.contains(packet.getItemInHand().getId())) {
+                        else if (packet.getItemInHand() != null && session.getItemMappings().getBucketIds().contains(packet.getItemInHand().getId())) {
                             // Let the server decide if the bucket item should change, not the client, and revert the changes the client made
                             InventorySlotPacket slotPacket = new InventorySlotPacket();
                             slotPacket.setContainerId(ContainerId.INVENTORY);
@@ -211,8 +211,8 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         if (packet.getActions().isEmpty()) {
                             if (session.getOpPermissionLevel() >= 2 && session.getGameMode() == GameMode.CREATIVE) {
                                 // Otherwise insufficient permissions
-                                int blockState = session.getBlockTranslator().getJavaBlockState(packet.getBlockRuntimeId());
-                                String blockName = BlockTranslator.getJavaIdBlockMap().inverse().getOrDefault(blockState, "");
+                                int blockState = session.getBlockMappings().getJavaBlockState(packet.getBlockRuntimeId());
+                                String blockName = BlockRegistries.JAVA_IDENTIFIERS.get().inverse().getOrDefault(blockState, "");
                                 // In the future this can be used for structure blocks too, however not all elements
                                 // are available in each GUI
                                 if (blockName.contains("jigsaw")) {
@@ -226,7 +226,7 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                             }
                         }
 
-                        ItemEntry handItem = ItemRegistry.getItem(packet.getItemInHand());
+                        ItemMapping handItem = session.getItemMappings().getMapping(packet.getItemInHand());
                         if (handItem.isBlock()) {
                             session.setLastBlockPlacePosition(blockPos);
                             session.setLastBlockPlacedId(handItem.getJavaIdentifier());
@@ -235,13 +235,13 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         break;
                     case 1:
                         // Handled in Entity.java
-                        if (session.getPlayerInventory().getItemInHand().getJavaId() == ItemRegistry.SHIELD.getJavaId()) {
+                        if (session.getPlayerInventory().getItemInHand().getJavaId() == session.getItemMappings().getStored("minecraft:shield").getJavaId()) {
                             break;
                         }
 
                         // Handled in ITEM_USE if the item is not milk
-                        if (packet.getItemInHand() != null && ItemRegistry.BUCKETS.contains(packet.getItemInHand().getId()) &&
-                                packet.getItemInHand().getId() != ItemRegistry.MILK_BUCKET.getBedrockId()) {
+                        if (packet.getItemInHand() != null && session.getItemMappings().getBucketIds().contains(packet.getItemInHand().getId()) &&
+                                packet.getItemInHand().getId() != session.getItemMappings().getStored("minecraft:milk_bucket").getBedrockId()) {
                             break;
                         }
 
@@ -271,9 +271,9 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
                         LevelEventPacket blockBreakPacket = new LevelEventPacket();
                         blockBreakPacket.setType(LevelEventType.PARTICLE_DESTROY_BLOCK);
                         blockBreakPacket.setPosition(packet.getBlockPosition().toFloat());
-                        blockBreakPacket.setData(session.getBlockTranslator().getBedrockBlockId(blockState));
+                        blockBreakPacket.setData(session.getBlockMappings().getBedrockBlockId(blockState));
                         session.sendUpstreamPacket(blockBreakPacket);
-                        session.setBreakingBlock(BlockTranslator.JAVA_AIR_ID);
+                        session.setBreakingBlock(BlockStateValues.JAVA_AIR_ID);
 
                         long frameEntityId = ItemFrameEntity.getItemFrameEntityId(session, packet.getBlockPosition());
                         if (frameEntityId != -1 && session.getEntityCache().getEntityByJavaId(frameEntityId) != null) {
@@ -356,14 +356,14 @@ public class BedrockInventoryTransactionTranslator extends PacketTranslator<Inve
         UpdateBlockPacket updateBlockPacket = new UpdateBlockPacket();
         updateBlockPacket.setDataLayer(0);
         updateBlockPacket.setBlockPosition(blockPos);
-        updateBlockPacket.setRuntimeId(session.getBlockTranslator().getBedrockBlockId(javaBlockState));
+        updateBlockPacket.setRuntimeId(session.getBlockMappings().getBedrockBlockId(javaBlockState));
         updateBlockPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
         session.sendUpstreamPacket(updateBlockPacket);
 
         UpdateBlockPacket updateWaterPacket = new UpdateBlockPacket();
         updateWaterPacket.setDataLayer(1);
         updateWaterPacket.setBlockPosition(blockPos);
-        updateWaterPacket.setRuntimeId(BlockTranslator.isWaterlogged(javaBlockState) ? session.getBlockTranslator().getBedrockWaterId() : session.getBlockTranslator().getBedrockAirId());
+        updateWaterPacket.setRuntimeId(BlockRegistries.WATERLOGGED.get().contains(javaBlockState) ? session.getBlockMappings().getBedrockWaterId() : session.getBlockMappings().getBedrockAirId());
         updateWaterPacket.getFlags().addAll(UpdateBlockPacket.FLAG_ALL_PRIORITY);
         session.sendUpstreamPacket(updateWaterPacket);
 

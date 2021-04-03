@@ -26,15 +26,15 @@
 package org.geysermc.connector.utils;
 
 import com.github.steveice10.mc.protocol.data.game.entity.Effect;
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.ItemStack;
 import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
 import com.nukkitx.math.vector.Vector3i;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
-import org.geysermc.connector.network.translators.item.ItemEntry;
-import org.geysermc.connector.network.translators.item.ToolItemEntry;
-
-import java.util.Optional;
+import org.geysermc.connector.network.translators.collision.translators.BlockCollision;
+import org.geysermc.connector.network.translators.world.block.BlockStateValues;
+import org.geysermc.connector.registry.BlockRegistries;
+import org.geysermc.connector.registry.Registries;
+import org.geysermc.connector.registry.type.BlockMapping;
+import org.geysermc.connector.registry.type.ItemMapping;
 
 public class BlockUtils {
 
@@ -106,40 +106,38 @@ public class BlockUtils {
         return 1.0 / speed;
     }
 
-    public static double getBreakTime(double blockHardness, int blockId, ItemEntry item, CompoundTag nbtData, GeyserSession session) {
-        boolean isWoolBlock = BlockTranslator.JAVA_RUNTIME_WOOL_IDS.contains(blockId);
-        boolean isCobweb = blockId == BlockTranslator.JAVA_RUNTIME_COBWEB_ID;
-        String blockToolType = BlockTranslator.JAVA_RUNTIME_ID_TO_TOOL_TYPE.getOrDefault(blockId, "");
-        boolean canHarvestWithHand = BlockTranslator.JAVA_RUNTIME_ID_TO_CAN_HARVEST_WITH_HAND.get(blockId);
+    public static double getBreakTime(double blockHardness, int blockId, ItemMapping item, CompoundTag nbtData, GeyserSession session) {
+        BlockMapping mapping = BlockRegistries.JAVA_BLOCKS.get(blockId);
+        boolean isWoolBlock = mapping.getIdentifier().contains("wool");
+        boolean isCobweb = blockId == BlockStateValues.JAVA_COBWEB_ID;
         String toolType = "";
         String toolTier = "";
         boolean correctTool = false;
-        if (item instanceof ToolItemEntry) {
-            ToolItemEntry toolItem = (ToolItemEntry) item;
-            toolType = toolItem.getToolType();
-            toolTier = toolItem.getToolTier();
-            correctTool = correctTool(blockToolType, toolType);
+        if (item.getToolTier() != null) {
+            toolType = item.getToolType();
+            toolTier = item.getToolTier();
+            correctTool = correctTool(mapping.getToolType(), toolType);
         }
         int toolEfficiencyLevel = ItemUtils.getEnchantmentLevel(nbtData, "minecraft:efficiency");
         int hasteLevel = 0;
         int miningFatigueLevel = 0;
 
         if (session == null) {
-            return calculateBreakTime(blockHardness, toolTier, canHarvestWithHand, correctTool, toolType, isWoolBlock, isCobweb, toolEfficiencyLevel, hasteLevel, miningFatigueLevel, false, false, false);
+            return calculateBreakTime(blockHardness, toolTier, mapping.isCanBreakWithHand(), correctTool, toolType, isWoolBlock, isCobweb, toolEfficiencyLevel, hasteLevel, miningFatigueLevel, false, false, false);
         }
 
         hasteLevel = session.getEffectCache().getEffectLevel(Effect.FASTER_DIG);
         miningFatigueLevel = session.getEffectCache().getEffectLevel(Effect.SLOWER_DIG);
 
         boolean isInWater = session.getConnector().getConfig().isCacheChunks()
-                && session.getBlockTranslator().getBedrockBlockId(session.getConnector().getWorldManager().getBlockAt(session, session.getPlayerEntity().getPosition().toInt())) == session.getBlockTranslator().getBedrockWaterId();
+                && session.getBlockMappings().getBedrockBlockId(session.getConnector().getWorldManager().getBlockAt(session, session.getPlayerEntity().getPosition().toInt())) == session.getBlockMappings().getBedrockWaterId();
 
         boolean insideOfWaterWithoutAquaAffinity = isInWater &&
                 ItemUtils.getEnchantmentLevel(session.getPlayerInventory().getItem(5).getNbt(), "minecraft:aqua_affinity") < 1;
 
         boolean outOfWaterButNotOnGround = (!isInWater) && (!session.getPlayerEntity().isOnGround());
         boolean insideWaterNotOnGround = isInWater && !session.getPlayerEntity().isOnGround();
-        return calculateBreakTime(blockHardness, toolTier, canHarvestWithHand, correctTool, toolType, isWoolBlock, isCobweb, toolEfficiencyLevel, hasteLevel, miningFatigueLevel, insideOfWaterWithoutAquaAffinity, outOfWaterButNotOnGround, insideWaterNotOnGround);
+        return calculateBreakTime(blockHardness, toolTier, mapping.isCanBreakWithHand(), correctTool, toolType, isWoolBlock, isCobweb, toolEfficiencyLevel, hasteLevel, miningFatigueLevel, insideOfWaterWithoutAquaAffinity, outOfWaterButNotOnGround, insideWaterNotOnGround);
     }
 
     /**
@@ -166,4 +164,22 @@ public class BlockUtils {
         return blockPos;
     }
 
+    // Note: these reuse classes, so don't try to store more than once instance or coordinates will get overwritten
+    public static BlockCollision getCollision(int blockId, int x, int y, int z) {
+        BlockCollision collision = Registries.COLLISIONS.get(blockId);
+        if (collision != null) {
+            collision.setPosition(x, y, z);
+        }
+        return collision;
+    }
+
+
+    public static BlockCollision getCollisionAt(GeyserSession session, int x, int y, int z) {
+        try {
+            return getCollision(session.getConnector().getWorldManager().getBlockAt(session, x, y, z), x, y, z);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            // Block out of world
+            return null;
+        }
+    }
 }

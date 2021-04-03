@@ -32,7 +32,8 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 /**
- * Used for block entities if the Java block state contains Bedrock block information.
+ * Stores information about various block states, primarily used
+ * for block entities.
  */
 public class BlockStateValues {
     private static final Int2IntMap BANNER_COLORS = new Int2IntOpenHashMap();
@@ -49,6 +50,18 @@ public class BlockStateValues {
     private static final Int2IntMap SKULL_WALL_DIRECTIONS = new Int2IntOpenHashMap();
     private static final Int2ByteMap SHULKERBOX_DIRECTIONS = new Int2ByteOpenHashMap();
     private static final Int2IntMap WATER_LEVEL = new Int2IntOpenHashMap();
+
+    public static final int JAVA_AIR_ID = 0;
+
+    public static int JAVA_COBWEB_ID;
+
+    public static int JAVA_FURNACE_ID;
+    public static int JAVA_FURNACE_LIT_ID;
+
+    public static int JAVA_SPAWNER_ID;
+
+    // Bedrock carpet ID, used in LlamaEntity.java for decoration
+    public static final int BEDROCK_CARPET_ID = 171;
 
     /**
      * Determines if the block state contains Bedrock block information

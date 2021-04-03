@@ -23,21 +23,12 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.connector.network.translators.world.block;
+package org.geysermc.connector.registry.loader;
 
-public class BlockTranslator1_16_210 extends BlockTranslator {
-    public static final BlockTranslator1_16_210 INSTANCE = new BlockTranslator1_16_210();
-
-    public BlockTranslator1_16_210() {
-        super("bedrock/blockpalette.1_16_210.nbt");
-    }
+public class EmptyRegistryLoader<K, V> implements RegistryLoader<K, V> {
 
     @Override
-    public int getBlockStateVersion() {
-        return 17879555;
-    }
-
-    public static void init() {
-        // no-op
+    public V load(K input) {
+        return null;
     }
 }

@@ -37,10 +37,10 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 import org.geysermc.connector.GeyserConnector;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.BiomeTranslator;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
 import org.geysermc.connector.network.translators.world.chunk.ChunkSection;
+import org.geysermc.connector.utils.BiomeUtils;
 import org.geysermc.connector.utils.ChunkUtils;
 
 @Translator(packet = ServerChunkDataPacket.class)
@@ -90,7 +90,7 @@ public class JavaChunkDataTranslator extends PacketTranslator<ServerChunkDataPac
                 int size = 0;
                 for (int i = 0; i < sectionCount; i++) {
                     ChunkSection section = sections[i];
-                    size += (section != null ? section : session.getBlockTranslator().getEmptyChunkSection()).estimateNetworkSize();
+                    size += (section != null ? section : session.getBlockMappings().getEmptyChunkSection()).estimateNetworkSize();
                 }
                 size += 256; // Biomes
                 size += 1; // Border blocks
@@ -103,10 +103,10 @@ public class JavaChunkDataTranslator extends PacketTranslator<ServerChunkDataPac
                 try {
                     for (int i = 0; i < sectionCount; i++) {
                         ChunkSection section = sections[i];
-                        (section != null ? section : session.getBlockTranslator().getEmptyChunkSection()).writeToNetwork(byteBuf);
+                        (section != null ? section : session.getBlockMappings().getEmptyChunkSection()).writeToNetwork(byteBuf);
                     }
 
-                    byteBuf.writeBytes(BiomeTranslator.toBedrockBiome(mergedColumn.getBiomeData())); // Biomes - 256 bytes
+                    byteBuf.writeBytes(BiomeUtils.toBedrockBiome(mergedColumn.getBiomeData())); // Biomes - 256 bytes
                     byteBuf.writeByte(0); // Border blocks - Edu edition only
                     VarInts.writeUnsignedInt(byteBuf, 0); // extra data length, 0 for now
 

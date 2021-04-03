@@ -30,7 +30,7 @@ import com.github.steveice10.opennbt.tag.builtin.StringTag;
 import com.github.steveice10.opennbt.tag.builtin.Tag;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.ItemRemapper;
-import org.geysermc.connector.network.translators.item.ItemEntry;
+import org.geysermc.connector.registry.type.ItemMapping;
 import org.geysermc.connector.network.translators.item.NbtItemStackTranslator;
 import org.geysermc.connector.utils.LocaleUtils;
 
@@ -38,7 +38,7 @@ import org.geysermc.connector.utils.LocaleUtils;
 public class PlayerHeadTranslator extends NbtItemStackTranslator {
 
     @Override
-    public void translateToBedrock(GeyserSession session, CompoundTag itemTag, ItemEntry itemEntry) {
+    public void translateToBedrock(GeyserSession session, CompoundTag itemTag, ItemMapping itemMapping) {
         if (!itemTag.contains("display") || !((CompoundTag) itemTag.get("display")).contains("Name")) {
             if (itemTag.contains("SkullOwner")) {
                 StringTag name;
@@ -66,7 +66,7 @@ public class PlayerHeadTranslator extends NbtItemStackTranslator {
     }
 
     @Override
-    public boolean acceptItem(ItemEntry itemEntry) {
-        return itemEntry.getJavaIdentifier().equals("minecraft:player_head");
+    public boolean acceptItem(ItemMapping itemMapping) {
+        return itemMapping.getJavaIdentifier().equals("minecraft:player_head");
     }
 }

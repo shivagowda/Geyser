@@ -25,7 +25,6 @@
 
 package org.geysermc.connector.network.translators.java.entity.player;
 
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.ItemStack;
 import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
 import com.github.steveice10.mc.protocol.data.game.entity.player.PlayerAction;
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerActionAckPacket;
@@ -38,9 +37,9 @@ import org.geysermc.connector.inventory.PlayerInventory;
 import org.geysermc.connector.network.session.GeyserSession;
 import org.geysermc.connector.network.translators.PacketTranslator;
 import org.geysermc.connector.network.translators.Translator;
-import org.geysermc.connector.network.translators.item.ItemEntry;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
+import org.geysermc.connector.network.translators.world.block.BlockStateValues;
+import org.geysermc.connector.registry.BlockRegistries;
+import org.geysermc.connector.registry.type.ItemMapping;
 import org.geysermc.connector.utils.BlockUtils;
 import org.geysermc.connector.utils.ChunkUtils;
 
@@ -55,7 +54,7 @@ public class JavaPlayerActionAckTranslator extends PacketTranslator<ServerPlayer
             stopBreak.setType(LevelEventType.BLOCK_STOP_BREAK);
             stopBreak.setPosition(Vector3f.from(packet.getPosition().getX(), packet.getPosition().getY(), packet.getPosition().getZ()));
             stopBreak.setData(0);
-            session.setBreakingBlock(BlockTranslator.JAVA_AIR_ID);
+            session.setBreakingBlock(BlockStateValues.JAVA_AIR_ID);
             session.sendUpstreamPacket(stopBreak);
         }
         if (!session.getConnector().getConfig().isCacheChunks()) {
@@ -65,7 +64,7 @@ public class JavaPlayerActionAckTranslator extends PacketTranslator<ServerPlayer
                     if (session.getGameMode() == GameMode.CREATIVE) {
                         break;
                     }
-                    double blockHardness = BlockTranslator.JAVA_RUNTIME_ID_TO_HARDNESS.get(packet.getNewState());
+                    double blockHardness = BlockRegistries.JAVA_BLOCKS.get(packet.getNewState()).getHardness();
                     levelEvent.setType(LevelEventType.BLOCK_START_BREAK);
                     levelEvent.setPosition(Vector3f.from(
                             packet.getPosition().getX(),
@@ -74,13 +73,13 @@ public class JavaPlayerActionAckTranslator extends PacketTranslator<ServerPlayer
                     ));
                     PlayerInventory inventory = session.getPlayerInventory();
                     GeyserItemStack item = inventory.getItemInHand();
-                    ItemEntry itemEntry = null;
+                    ItemMapping itemMapping = null;
                     CompoundTag nbtData = new CompoundTag("");
                     if (item != null) {
-                        itemEntry = item.getItemEntry();
+                        itemMapping = item.getMapping(session);
                         nbtData = item.getNbt();
                     }
-                    double breakTime = Math.ceil(BlockUtils.getBreakTime(blockHardness, packet.getNewState(), itemEntry, nbtData, session) * 20);
+                    double breakTime = Math.ceil(BlockUtils.getBreakTime(blockHardness, packet.getNewState(), itemMapping, nbtData, session) * 20);
                     levelEvent.setData((int) (65535 / breakTime));
                     session.setBreakingBlock(packet.getNewState());
                     session.sendUpstreamPacket(levelEvent);

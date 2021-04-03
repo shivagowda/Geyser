@@ -35,7 +35,6 @@ import com.nukkitx.protocol.bedrock.packet.EntityEventPacket;
 import org.geysermc.connector.entity.living.animal.AnimalEntity;
 import org.geysermc.connector.entity.type.EntityType;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.item.ItemRegistry;
 
 public class AbstractHorseEntity extends AnimalEntity {
 
@@ -76,7 +75,7 @@ public class AbstractHorseEntity extends AnimalEntity {
                 EntityEventPacket entityEventPacket = new EntityEventPacket();
                 entityEventPacket.setRuntimeEntityId(geyserId);
                 entityEventPacket.setType(EntityEventType.EATING_ITEM);
-                entityEventPacket.setData(ItemRegistry.WHEAT.getBedrockId() << 16);
+                entityEventPacket.setData(session.getItemMappings().getStored("minecraft:wheat").getBedrockId() << 16);
                 session.sendUpstreamPacket(entityEventPacket);
             }
 

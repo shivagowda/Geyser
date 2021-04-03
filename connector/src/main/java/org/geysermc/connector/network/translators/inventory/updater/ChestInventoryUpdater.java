@@ -37,10 +37,11 @@ import org.geysermc.connector.utils.LanguageUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 @AllArgsConstructor
 public class ChestInventoryUpdater extends InventoryUpdater {
-    private static final ItemData UNUSUABLE_SPACE_BLOCK = InventoryUtils.createUnusableSpaceBlock(LanguageUtils.getLocaleStringLog("geyser.inventory.unusable_item.slot"));
+    private static final Function<GeyserSession, ItemData> UNUSUABLE_SPACE_BLOCK = (session) -> InventoryUtils.createUnusableSpaceBlock(LanguageUtils.getLocaleStringLog("geyser.inventory.unusable_item.slot"), session);
 
     private final int paddedSize;
 
@@ -53,7 +54,7 @@ public class ChestInventoryUpdater extends InventoryUpdater {
             if (i < translator.size) {
                 bedrockItems.add(inventory.getItem(i).getItemData(session));
             } else {
-                bedrockItems.add(UNUSUABLE_SPACE_BLOCK);
+                bedrockItems.add(UNUSUABLE_SPACE_BLOCK.apply(session));
             }
         }
 

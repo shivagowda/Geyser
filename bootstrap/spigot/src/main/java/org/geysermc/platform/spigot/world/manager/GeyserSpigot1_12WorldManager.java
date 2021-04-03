@@ -32,7 +32,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.geysermc.connector.network.session.GeyserSession;
-import org.geysermc.connector.network.translators.world.block.BlockTranslator;
+import org.geysermc.connector.network.translators.world.block.BlockStateValues;
 import us.myles.ViaVersion.api.Pair;
 import us.myles.ViaVersion.api.Via;
 import us.myles.ViaVersion.api.data.MappingData;
@@ -74,11 +74,11 @@ public class GeyserSpigot1_12WorldManager extends GeyserSpigotWorldManager {
     public int getBlockAt(GeyserSession session, int x, int y, int z) {
         Player player = Bukkit.getPlayer(session.getPlayerEntity().getUsername());
         if (player == null) {
-            return BlockTranslator.JAVA_AIR_ID;
+            return BlockStateValues.JAVA_AIR_ID;
         }
         if (!player.getWorld().isChunkLoaded(x >> 4, z >> 4)) {
             // Prevent nasty async errors if a player is loading in
-            return BlockTranslator.JAVA_AIR_ID;
+            return BlockStateValues.JAVA_AIR_ID;
         }
         // Get block entity storage
         BlockStorage storage = Via.getManager().getConnection(player.getUniqueId()).get(BlockStorage.class);

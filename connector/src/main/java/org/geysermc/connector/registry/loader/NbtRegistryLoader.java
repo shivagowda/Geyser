@@ -23,36 +23,24 @@
  * @link https://github.com/GeyserMC/Geyser
  */
 
-package org.geysermc.connector.network.translators.world.chunk;
+package org.geysermc.connector.registry.loader;
 
-import com.nukkitx.nbt.NBTOutputStream;
+import com.nukkitx.nbt.NBTInputStream;
 import com.nukkitx.nbt.NbtMap;
 import com.nukkitx.nbt.NbtUtils;
-import lombok.Getter;
+import org.geysermc.connector.utils.FileUtils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.InputStream;
 
-public class EmptyChunkProvider {
-    @Getter
-    private final byte[] emptyLevelChunkData;
-    @Getter
-    private final ChunkSection emptySection;
+public class NbtRegistryLoader extends ResourceRegistryLoader<NbtMap> {
 
-    public EmptyChunkProvider(int airId) {
-        BlockStorage emptyStorage = new BlockStorage(airId);
-        emptySection = new ChunkSection(new BlockStorage[]{emptyStorage});
-
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            outputStream.write(new byte[258]); // Biomes + Border Size + Extra Data Size
-
-            try (NBTOutputStream stream = NbtUtils.createNetworkWriter(outputStream)) {
-                stream.writeTag(NbtMap.EMPTY);
-            }
-
-            emptyLevelChunkData = outputStream.toByteArray();
-        } catch (IOException e) {
-            throw new AssertionError("Unable to generate empty level chunk data");
+    @Override
+    public NbtMap load(String input) {
+        InputStream stream = FileUtils.getResource(input);
+        try (NBTInputStream nbtInputStream = NbtUtils.createNetworkReader(stream)) {
+            return (NbtMap) nbtInputStream.readTag();
+        } catch (Exception e) {
+            throw new AssertionError("Failed to load registrations for " + input, e);
         }
     }
 }
